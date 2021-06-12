@@ -1,0 +1,351 @@
+\documentclass[12pt,english]{article}
+\usepackage[english]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[latin2]{inputenc}
+%\usepackage{indentfirst}
+%\frenchspacing
+
+\usepackage{amstext}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{amsmath}
+
+\usepackage[top=2.2cm, bottom=2.2cm, left=2.2cm, right=2.2cm]{geometry}
+
+\title{Capstone Project - The Battle of Neighbourhoods}
+\author{Norbert Bogya -- \href{mailto://bnorbert88@gmail.com}{bnorbert88@gmail.com}}
+\date{\today}
+
+\theoremstyle{definition}
+
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{booktabs}
+
+\usepackage{xcolor}
+
+\definecolor{sarga}{HTML}{FFAA55}
+\definecolor{lila}{HTML}{C92AD5}
+\definecolor{kek}{HTML}{0100FF}
+
+\colorlet{punct}{red!60!black}
+\definecolor{background}{HTML}{EEEEEE}
+\definecolor{delim}{RGB}{20,105,176}
+\colorlet{numb}{magenta!60!black}
+
+\lstdefinelanguage{json}{
+	basicstyle=\normalfont\ttfamily,
+	numbers=left,
+	numberstyle=\scriptsize,
+	stepnumber=1,
+	numbersep=8pt,
+	showstringspaces=false,
+	breaklines=true,
+	frame=lines,
+	backgroundcolor=\color{background},
+	literate=
+	*{0}{{{\color{numb}0}}}{1}
+	{1}{{{\color{numb}1}}}{1}
+	{2}{{{\color{numb}2}}}{1}
+	{3}{{{\color{numb}3}}}{1}
+	{4}{{{\color{numb}4}}}{1}
+	{5}{{{\color{numb}5}}}{1}
+	{6}{{{\color{numb}6}}}{1}
+	{7}{{{\color{numb}7}}}{1}
+	{8}{{{\color{numb}8}}}{1}
+	{9}{{{\color{numb}9}}}{1}
+	{:}{{{\color{punct}{:}}}}{1}
+	{,}{{{\color{punct}{,}}}}{1}
+	{\{}{{{\color{delim}{\{}}}}{1}
+	{\}}{{{\color{delim}{\}}}}}{1}
+	{[}{{{\color{delim}{[}}}}{1}
+	{]}{{{\color{delim}{]}}}}{1},
+}
+
+
+\begin{document}
+
+\maketitle
+
+\section*{Business Problem}\label{sec:business}
+
+When a new start-up IT company levels up and can afford a real office instead of working home, it is quite important to open it in as suitable neighbourhood as possible. In general, the decision can be made by several parameters, for example renting price, size and scalability of the office, but in large office block, these parameters can be varied quite easily. In this analysis, we focus on the human part of the problem.
+
+Shortly, an ideal spot to rent an office should be a youthful neighbourhood near university buildings that provide a motivating working environment. In details, to choose the best neighbourhood, we consider the following three aspects.
+\begin{itemize}
+	\item To create a motivating working environment, a dynamic office-block area is needed to choose. If workers are surrounded by similar workers, who enjoys to work there, it will help their productivity.
+	\item As the potential new workers will come from the universities of Budapest, it is convenient to find a place that is near the main university buildings and colleges. In this case it will be much more attractive for young, agile students who are taking classes at a university in parallel their job.
+	\item To increase the youthfulness of the area, it is recommended to choose a neighbourhood with places that are preferred in the circle of young people. For example, cafés in the area will empower the attractiveness among them.
+\end{itemize}
+By the above concept, we try to cluster the neighbourhoods in Budapest, considering the number of existing office buildings, university buildings and cafés, and with the help of this clustering provide a suggestion to the spot that is suitable for a new office.
+
+\section*{Data}
+
+We use two different kind of data. We need static data about the neighbourhoods of Budapest and venue data about what can we find in the appropriate areas.
+\begin{enumerate}[label=(\arabic*)]
+	\item \url{https://hu.wikipedia.org/wiki/Budapest_v\%C3\%A1rosr\%C3\%A9szeinek_list\%C3\%A1ja}\\
+	This website contains table about the neighbourhoods of the Hungarian capital, Budapest, see Figure~\ref{fig:neighbourhoods}. Budapest is divided onto 23 districts, and each district may contain several neighbourhoods. We use only the ``Név'' and ``Kerület'' columns of the table, which correspond to the names of the neighbourhoods and districts, respectively.
+	\begin{figure}[!h]
+		\centering
+		\includegraphics[width=1\linewidth]{neighbourhoods}
+		\caption{Image about the table from Wikipedia}
+		\label{fig:neighbourhoods}
+	\end{figure}
+	
+	\item \url{https://api.foursquare.com}\\
+	We use the \textit{Foursquare} API the explore the areas and retrieve the necessary information that correspond to the above problem description.
+	\begin{figure}[!h]
+		\centering
+		\includegraphics[width=1\linewidth]{foursquare}
+		\caption{Homepage of the Foursquare application}
+		\label{fig:foursquare}
+	\end{figure}
+	During the API calls, we filters for the mentioned categories of the venues: cafés, universities and offices. Foursquare API has an option to restrict our exploration to several type of venues, see Figure~\ref{fig:categories}.
+	\begin{figure}[!h]
+		\centering
+		\includegraphics[width=1\linewidth]{foursquare2}
+		\caption{List of available categories in Foursquare API}
+		\label{fig:categories}
+	\end{figure}
+\end{enumerate}
+
+To demonstrate this, I illustrate the data on the neighbourhood Gellérthegy of the district I od Budapest. If we want to focus for the nearby office buildings, we make the API call
+\begin{center}
+	\url{https://api.foursquare.com/v2/venues/explore?&client_id=CLIENT_ID&client_secret=SECRET_CLIENT_ID&v=20180605&ll=47.492064,19.037200&radius=300&limit=100&categoryId=4bf58dd8d48988d124941735}
+\end{center}
+that retrieves with the following JSON data with 4 different venues from the office category.
+
+\lstinputlisting[language=json]{sample.json}
+
+\section*{Methodology}
+
+\subsection*{Loading Data}
+
+Data of the neighbourhoods and district of Budapest is from a Wikipedia webpage, so we need to pull these data out of HTML tables. We do this by a \textit{Python} library, that is \textit{Beautiful Soup}. Name of the districts, and neighbourhoods of Budapest are saved into a \textit{pandas} \textit{dataframe}. The following packages are used during the data preparation: \begin{center}
+	\texttt{pandas, numpy, requests, bs4}.
+\end{center}
+
+Some data cleaning is necessary, because in the original table there are some neighbourhoods that correspond to more than one districts, hence we separate them by an easy string manipulation technique to get unique district-neighbourhood pairs. This part of the data preparation contains basic dataframe operations, and its result is a clean dataframe.
+
+Then, with another \textit{Python} client, \textit{GeoPy}, we locate the centres of neighbourhoods using \textit{Nominatim} and \textit{Photon} geocoding services. Geopy makes it easy for Python developers to locate the coordinates of addresses, cities, countries, and landmarks across the globe using third-party geocoders and other data sources. We need to find the location of neighbourhoods to illustrate them on the map, but the exact coordinates are not considered in the further calculations. At this point, we have a full list of neighbourhoods of Budapest with geometric location data. With the Python package \textit{folium}, we can illustrate them on a map.
+
+It is followed by a lot of Foursquare API calls to get information from the venues in the neighbourhoods. Foursquare is a webpage to explore venue information near a specific location, that can be exact address or geographic coordinates. We focus on the number of cafés, university buildings and office buildings near the centres of the neighbourhoods. The \url{https://api.foursquare.com/v2/venues/explore} API has a flag called ``categoryId'', that can filter the nearby venues onto a certain category. We use the following ID-s:
+\begin{itemize}
+	\item office: 4bf58dd8d48988d124941735,
+	\item university: 4d4b7105d754a06372d8125,
+	\item cafe: 4bf58dd8d48988d16d94173
+\end{itemize}
+
+\subsection*{Clustering}
+
+We cluster these information as a three dimensional space to locate the similar neighbourhoods using $k$-means clustering algorithm. The neighbourhoods are mapped into the space $\mathbb{R}^3$ by the corresponding (office, university, cafe)-triplet.
+
+To perform a $k$-means clustering, the first thing is to estimate the best choice of the value $k$. With the scikit-learn machine learning library, we can easily build $k$-means models with different values of $k$ with a simple for loop, saving the distortions of the models. Using the elbow rule, the distortion plot will suggest the ideal value of $k$.
+
+\section*{Results}
+
+\subsection*{Loading Data}
+
+The webpage about neighbourhoods of Budapest contains a very good table about the list of neighbourhoods. It is a well structured html table, so it is easy to read and load it with Beautiful Soup library into a dataframe, like Table~\ref{table:bpneigh}.
+
+\begin{table}
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		{} &                  district &                  neighborhood \\
+		\midrule
+		0 &     Budapest II. kerülete &                      Adyliget \\
+		1 &   Budapest XVII. kerülete &               Akadémiaújtelep \\
+		2 &     Budapest XI. kerülete &                   Albertfalva \\
+		3 &  Budapest XVIII. kerülete &                     Almáskert \\
+		4 &    Budapest XIV. kerülete &                     Alsórákos \\
+		5 &   Budapest XIII. kerülete &                    Angyalföld \\
+		6 &    Budapest III. kerülete &                      Aquincum \\
+		7 &    Budapest III. kerülete &  Aranyhegy-Ürömhegy-Péterhegy \\
+		8 &    Budapest XVI. kerülete &                     Árpádföld \\
+		9 &   Budapest XXII. kerülete &            Baross Gábor-telep \\
+		\bottomrule
+	\end{tabular}
+	\caption{Dataframe from the Wikipedia webpage}
+	\label{table:bpneigh}
+\end{table}
+
+Budapest is divided into 23 different districts and the 1-level smaller administrative units are the neighbourhoods. After a small data cleaning, we split some row into unique (district, neighbourhood) pairs, see Table~\ref{table:bpneigh2}.
+
+\begin{table}
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		{} & district &    neighborhood \\
+		\midrule
+		0 &        I &     Gellérthegy \\
+		1 &        I &  Krisztinaváros \\
+		2 &        I &           Tabán \\
+		3 &        I &             Vár \\
+		4 &        I &       Víziváros \\
+		5 &       II &        Adyliget \\
+		6 &       II &   Budakeszierdõ \\
+		7 &       II &       Budaliget \\
+		8 &       II &        Csatárka \\
+		9 &       II &   Erzsébetliget \\
+		\bottomrule
+	\end{tabular}
+	\caption{Dataframe unique (district, neighbourhood) pairs}
+	\label{table:bpneigh2}
+\end{table}
+
+After that, latitude and longitude coordinates are appended to the previous dataframe (Table~\ref{table:coord}), using \textit{GeoPy} client.
+
+\begin{table}
+	\centering
+	\begin{tabular}{lllrr}
+		\toprule
+		{} & district &    neighborhood &   Latitude &  Longitude \\
+		\midrule
+		0 &        I &     Gellérthegy &  47.492064 &  19.037200 \\
+		1 &        I &  Krisztinaváros &  47.496866 &  19.029776 \\
+		2 &        I &           Tabán &  47.491613 &  19.043169 \\
+		3 &        I &             Vár &  47.495334 &  19.039546 \\
+		4 &        I &       Víziváros &  47.503719 &  19.039128 \\
+		5 &       II &        Adyliget &  47.547550 &  18.938984 \\
+		6 &       II &   Budakeszierdõ &  47.542471 &  18.972903 \\
+		7 &       II &       Budaliget &  47.567579 &  18.940664 \\
+		8 &       II &        Csatárka &  47.531525 &  19.002578 \\
+		9 &       II &   Erzsébetliget &  47.561714 &  18.967558 \\
+		\bottomrule
+	\end{tabular}
+	\caption{Dataframe with geographic coordinates}
+	\label{table:coord}
+\end{table}
+
+With the \textit{folium} package, we can illustrate these neighbourhoods on a map (Figure~\ref{fig:bp1}).
+
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=1\linewidth]{bp1}
+	\caption{Neigbourhoods of Budapest}
+	\label{fig:bp1}
+\end{figure}
+
+Appending the number of cafés, university buildings and office buildings near the given coordinates, we get a dataframe like Table~\ref{table:nvenues}.
+
+\begin{table}
+	\centering
+	\begin{tabular}{lllrrrrr}
+		\toprule
+		{} & district &    neighborhood &   Latitude &  Longitude &  office &  university &  cafe \\
+		\midrule
+		0 &        I &     Gellérthegy &  47.492064 &  19.037200 &       4 &           3 &     3 \\
+		1 &        I &  Krisztinaváros &  47.496866 &  19.029776 &      17 &           5 &     7 \\
+		2 &        I &           Tabán &  47.491613 &  19.043169 &       2 &           1 &     3 \\
+		3 &        I &             Vár &  47.495334 &  19.039546 &       3 &           4 &     8 \\
+		4 &        I &       Víziváros &  47.503719 &  19.039128 &       4 &           3 &     8 \\
+		5 &       II &        Adyliget &  47.547550 &  18.938984 &       0 &           0 &     0 \\
+		6 &       II &   Budakeszierdõ &  47.542471 &  18.972903 &       0 &           0 &     0 \\
+		7 &       II &       Budaliget &  47.567579 &  18.940664 &       0 &           1 &     0 \\
+		8 &       II &        Csatárka &  47.531525 &  19.002578 &       0 &           1 &     0 \\
+		9 &       II &   Erzsébetliget &  47.561714 &  18.967558 &       0 &           0 &     0 \\
+		\bottomrule
+	\end{tabular}
+	\caption{Dataframe with number of venues}
+	\label{table:nvenues}
+\end{table}
+
+\subsection*{Clustering}
+
+Creating models with $k=2,3,\ldots 20$, we get the distortion plot on Figure~\ref{fig:kmeans}.
+
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=0.7\linewidth]{kmeans}
+	\caption{Distortion diagram}
+	\label{fig:kmeans}
+\end{figure}
+
+Using the elbow method, we can see that the optimal choice for $k$ is 5. In the later work we will focus on 5 different clusters. Clustering the triplets, we get the clusters that are illustrated in the Figure~\ref{fig:bp2}.
+
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=1\linewidth]{bp2}
+	\caption{Clustering of neighbourhoods by the number of universities, cafés and offices.}
+	\label{fig:bp2}
+\end{figure}
+
+We can summarise the size of clusters in the Table~\ref{table:clustersize}.
+
+\begin{table}
+	\centering
+	\begin{tabular}{lr}
+		\toprule
+		{} &    Size \\
+		Cluster Labels &      \\
+		\midrule
+		0              &   29 \\
+		1              &    9 \\
+		2              &    3 \\
+		3              &  164 \\
+		4              &    4 \\
+		\bottomrule
+	\end{tabular}
+	\caption{Size of clusters}
+	\label{table:clustersize}
+\end{table}
+
+\section*{Discussion}
+
+We investigate the above clusters one-by-one. Let us start with the {\color{lila}\textbf{cluster with label 3}}. Most of the neighbourhoods lie in this cluster, however this cluster is the least suitable for us. This one contains neighbourhoods whose (universities,cafés,offices) triplet has low numbers, the frequencies of the specific venues considering the 164 neighbourhoods can be observed in the Figure~\ref{fig:df3}. None of these neighbourhoods can be suggested to open a new office, so most of the neighbourhoods do not require further investigations. These neighbourhoods are coloured as {\color{lila}\textbf{purplish magenta}}.
+
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=0.7\linewidth]{df3}
+	\caption{Frequencies of the numbers of venues in cluster 3.}
+	\label{fig:df3}
+\end{figure}
+
+Let us continue with cluster 0, that is represented on the map with white dots. It contains spots where there are a few university buildings and quite small number of cafés and universities, see in Figure~\ref{fig:df0}. This cluster is neither recommended, because of the small number of important factors.
+
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=0.7\linewidth]{df0}
+	\caption{Frequencies of the numbers of venues in cluster 0.}
+	\label{fig:df0}
+\end{figure}
+
+{\color{kek}\textbf{Cluster 2}} is a very small cluster with only 3 elements, see Table~\ref{table:cluster2}. These spots has a large number of university buildings, however the number of offices and cafés are quite small. This is a very unique situation in Budapest, because these areas contain the main buildings of the two biggest universities of Budapest (ELTE and BME) and besides this campus region there is a huge office area, called Infopark. In this are there are few number of reported cafés, because the cafés and restaurants in these neighbourhoods are inside the universities and office building that focus students and employees, respectively. These spots are highly recommended to open new office, but it is an overwhelmed area, and to open offices is not too cheap.
+
+\begin{table}
+	\centering
+	\begin{tabular}{lrllrrrrr}
+		\toprule
+		{} &  Cluster Labels & district &  neighborhood &   Latitude &  Longitude &  office &  university &  cafe \\
+		\midrule
+		71 &               2 &     VIII &  Palotanegyed &  47.492185 &  19.066103 &       6 &          49 &    13 \\
+		94 &               2 &       XI &      Infopark &  47.470484 &  19.060338 &      33 &          49 &     2 \\
+		99 &               2 &       XI &    Lágymányos &  47.478441 &  19.057715 &       4 &          61 &     1 \\
+		\bottomrule
+	\end{tabular}
+	\caption{Elements of cluster with label 2}
+	\label{table:cluster2}
+\end{table}
+
+{\color{sarga}\textbf{Cluster 4}} and {\color{black}\textbf{Cluster 1}} are similar clusters. Their common property is that, they contain large number of office buildings but small number of cafés and university buildings. Cluster 4 has only few element, and these neighbourhoods are the most crowded spots of Budapest, including the inner city. There are a lot of office buildings here, but they are far from the university campuses. On the other hand, Cluster 1 is more balanced with a lot of office building and moderate number of cafés and university buildings.
+
+Taking everything into account, by this clustering method we can recommend the clusters in the following priority order.
+
+\begin{enumerate}[label=(\arabic*)]
+	\item Cluster 2
+	\item Cluster 1
+	\item Cluster 4
+	\item Cluster 0
+	\item Cluster 3
+\end{enumerate}
+
+\section*{Conclusion}
+
+In this report we used a clustering algorithm to find a recommendation to the business problem described in the first section, namely what is an ideal spot to open a new office for a new start-up IT company. We have considered the number of cafes, universities and other office buildings in the neighbourhoods, but of course with more data we can consider other important parameters, too such as renting price, noise pollution, distance from the main public transport hubs, and so on\ldots Using a classical $k$-means algorithm, we could suggest an area (and prioritize others) that is ideal for a new office.
+
+
+
+\end{document}
